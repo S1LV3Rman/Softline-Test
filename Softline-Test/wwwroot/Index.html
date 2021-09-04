@@ -219,11 +219,14 @@
 
             if (id != 0)
                 document.querySelector("tr[data-rowid='" + id + "']").style.outline = "none";
+            isFormActive = false;
             document.getElementById("objective_form").style.display = "none";
             const err = document.getElementById("errors");
             err.innerHTML = "";
             err.style.display = "none";
         }
+
+        let isFormActive = false;
 
         function Row(objective) {
 
@@ -231,26 +234,32 @@
             tr.setAttribute("data-rowid", objective.id);
             tr.addEventListener("mouseover", e => {
                 e.preventDefault();
-                const form = document.forms["objectiveForm"];
-                const id = form.elements["id"].value;
-                if (id != objective.id)
-                    tr.style.outline = "1px solid gray";
+                if (!isFormActive) {
+                    const form = document.forms["objectiveForm"];
+                    const id = form.elements["id"].value;
+                    if (id != objective.id)
+                        tr.style.outline = "1px solid gray";
+                }
             })
             tr.addEventListener("mouseout", e => {
                 e.preventDefault();
-                const form = document.forms["objectiveForm"];
-                const id = form.elements["id"].value;
-                if (id != objective.id)
-                    tr.style.outline = "none";
+                if (!isFormActive) {
+                    const form = document.forms["objectiveForm"];
+                    const id = form.elements["id"].value;
+                    if (id != objective.id)
+                        tr.style.outline = "none";
+                }
             })
             tr.addEventListener("click", e => {
                 e.preventDefault();
-                const form = document.forms["objectiveForm"];
-                const id = form.elements["id"].value;
-                if (id != 0)
-                    document.querySelector("tr[data-rowid='" + id + "']").style.outline = "none";
-                SelectObjective(objective.id);
-                tr.style.outline = "2px solid black";
+                if (!isFormActive) {
+                    const form = document.forms["objectiveForm"];
+                    const id = form.elements["id"].value;
+                    if (id != 0)
+                        document.querySelector("tr[data-rowid='" + id + "']").style.outline = "none";
+                    SelectObjective(objective.id);
+                    tr.style.outline = "2px solid black";
+                }
             })
 
             const nameTd = document.createElement("td");
@@ -270,6 +279,8 @@
 
         document.getElementById("add_button").addEventListener("click", e => {
             e.preventDefault();
+            Reset();
+            isFormActive = true;
             document.getElementById("objective_form").style.display = "block";
         })
 
@@ -282,6 +293,7 @@
 
         document.getElementById("edit_button").addEventListener("click", e => {
             e.preventDefault();
+            isFormActive = true;
             document.getElementById("objective_form").style.display = "block";
         })
 

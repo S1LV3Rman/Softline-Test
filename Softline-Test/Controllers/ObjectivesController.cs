@@ -93,9 +93,8 @@ namespace Softline_Test.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            //foreach(var obj in db.Objectives)
-                //if (objective.Status == null)
-                //    objective.Status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == objective.StatusId);
+            if (objective.Status == null)
+                objective.Status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == objective.StatusId);
 
             db.Objectives.Add(objective);
             try
@@ -104,6 +103,7 @@ namespace Softline_Test.Controllers
             }
             catch(Exception ex)
             {
+                return BadRequest(ex);
             }
             return Ok(objective);
         }
@@ -120,8 +120,8 @@ namespace Softline_Test.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            //if (objective.Status == null)
-            //    objective.Status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == objective.StatusId);
+            if (objective.Status == null)
+                objective.Status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == objective.StatusId);
 
             db.Update(objective);
             await db.SaveChangesAsync();
