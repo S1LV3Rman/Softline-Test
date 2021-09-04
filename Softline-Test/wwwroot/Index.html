@@ -1,0 +1,315 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Список задач</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+    <table width="100%" cellspacing="0" cellpadding="50">
+        <tr>
+            <td width="60%" valign="top">
+                <h2>Список задач</h2>
+                <button type="button" id="add_button" class="btn btn-primary">Добавить</button>
+                <button type="button" id="delete_button" class="btn btn-primary">Удалить</button>
+                <button type="button" id="edit_button" class="btn btn-primary">Изменить</button>
+                <table class="button table-condensed table-striped" style="border-spacing: 20px 20px;">
+                    <thead><tr><th>Наименование</th><th>Описание</th><th>Статус</th></tr></thead>
+                    <tbody id="table_body">
+                    </tbody>
+                </table>
+            </td>
+            <td width="40%" valign="top">
+                <div id="objective_form" style="display:none;">
+                    <h2>Задача</h2>
+                    <div id="errors" class="alert alert-danger" style="display:none;"></div>
+                    <form name="objectiveForm">
+                        <input type="hidden" name="id" value="0" />
+                        <div class="form-group">
+                            <label for="name">Наименование:</label>
+                            <input width="100" class="form-control" name="name" />
+                        </div>
+                        <div class="form-group">
+                            <label for="description">Описание:</label>
+                            <input class="form-control" name="description" />
+                        </div>
+                        <div class="form-group">
+                            <label for="statusId">Статус:</label>
+                            <p>
+                                <select id="select_status" name="statusId">
+                                    <option disabled>Выберите статус</option>
+                                </select>
+                            </p>
+                        </div>
+                        <div class="panel-body">
+                            <button type="submit" id="submit" class="btn btn-primary">Сохранить</button>
+                            <button type="button" id="reset_button" class="btn btn-primary">Отменить</button>
+                        </div>
+                    </form>
+                </div>
+            </td>
+        </tr>
+    </table>    
+    <script>
+
+        async function GetStatuses()
+        {
+            const response = await fetch("api/objectives/statuses", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const statuses = await response.json();
+                let rows = document.getElementById("select_status");
+                statuses.forEach(status => rows.append(Option(status)));
+            }
+        }
+
+        function Option(status)
+        {
+
+            const option = document.createElement("option");
+            option.setAttribute("value", status.id);
+            option.append(status.name);
+
+            return option;
+        }
+
+        async function GetObjectives()
+        {
+            const response = await fetch("api/objectives", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true)
+            {
+                const objectives = await response.json();
+                let rows = document.getElementById("table_body");
+                objectives.forEach(objective => rows.append(Row(objective)));
+            }
+        }
+
+        async function SelectObjective(id)
+        {
+            const response = await fetch("/api/objectives/" + id, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const objective = await response.json();
+                const form = document.forms["objectiveForm"];
+                form.elements["id"].value = objective.id;
+                form.elements["name"].value = objective.name;
+                form.elements["description"].value = objective.description;
+                form.elements["statusId"].value = objective.statusId;
+            }
+        }
+
+        async function CreateObjective(objectiveName, objectiveDescription, objectiveStatusId)
+        {
+
+            const response = await fetch("api/objectives", {
+                method: "POST",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: objectiveName,
+                    description: objectiveDescription,
+                    statusId: parseInt(objectiveStatusId, 10)
+                })
+            });
+            if (response.ok === true)
+            {
+                const objective = await response.json();
+                Reset();
+                document.getElementById("table_body").append(Row(objective));
+            }
+            else
+            {
+                const errorData = await response.json();
+                WriteErrors(errorData);
+            }
+        }
+
+        async function EditObjective(objectiveId, objectiveName, objectiveDescription, objectiveStatusId)
+        {
+            const response = await fetch("api/objectives", {
+                method: "PUT",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: parseInt(objectiveId, 10),
+                    name: objectiveName,
+                    description: objectiveDescription,
+                    statusId: parseInt(objectiveStatusId, 10)
+                })
+            });
+            if (response.ok === true)
+            {
+                const objective = await response.json();
+                Reset();
+                document.querySelector("tr[data-rowid='" + objective.id + "']").replaceWith(Row(objective));
+            }
+            else
+            {
+                const errorData = await response.json();
+                WriteErrors(errorData);
+            }
+        }
+
+        async function DeleteObjective(id)
+        {
+            const response = await fetch("/api/objectives/" + id, {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true)
+            {
+                const objective = await response.json();
+                Reset();
+                document.querySelector("tr[data-rowid='" + objective.id + "']").remove();
+            }
+        }
+
+        function WriteErrors(errorData)
+        {
+            console.log("errors", errorData);
+            if (errorData) {
+                if (errorData.errors) {
+                    if (errorData.errors["Name"]) {
+                        addError(errorData.errors["Name"]);
+                    }
+                    if (errorData.errors["Description"]) {
+                        addError(errorData.errors["Description"]);
+                    }
+                    if (errorData.errors["StatusId"]) {
+                        addError(errorData.errors["StatusId"]);
+                    }
+                }
+                if (errorData["Name"]) {
+                    addError(errorData["Name"]);
+                }
+                if (errorData["Description"]) {
+                    addError(errorData["Description"]);
+                }
+                if (errorData["StatusId"]) {
+                    addError(errorData["StatusId"]);
+                }
+            }
+
+            document.getElementById("errors").style.display = "block";
+        }
+
+        function addError(errors)
+        {
+            errors.forEach(error => {
+                const p = document.createElement("p");
+                p.append(error);
+                document.getElementById("errors").append(p);
+            });
+        }
+
+        function Reset() {
+            const form = document.forms["objectiveForm"];
+            form.reset();
+            const id = form.elements["id"].value;
+            form.elements["id"].value = 0;
+            form.elements["name"].value = "";
+            form.elements["description"].value = "";
+            form.elements["statusId"].value = "";
+
+            if (id != 0)
+                document.querySelector("tr[data-rowid='" + id + "']").style.outline = "none";
+            document.getElementById("objective_form").style.display = "none";
+            const err = document.getElementById("errors");
+            err.innerHTML = "";
+            err.style.display = "none";
+        }
+
+        function Row(objective) {
+
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-rowid", objective.id);
+            tr.addEventListener("mouseover", e => {
+                e.preventDefault();
+                const form = document.forms["objectiveForm"];
+                const id = form.elements["id"].value;
+                if (id != objective.id)
+                    tr.style.outline = "1px solid gray";
+            })
+            tr.addEventListener("mouseout", e => {
+                e.preventDefault();
+                const form = document.forms["objectiveForm"];
+                const id = form.elements["id"].value;
+                if (id != objective.id)
+                    tr.style.outline = "none";
+            })
+            tr.addEventListener("click", e => {
+                e.preventDefault();
+                const form = document.forms["objectiveForm"];
+                const id = form.elements["id"].value;
+                if (id != 0)
+                    document.querySelector("tr[data-rowid='" + id + "']").style.outline = "none";
+                SelectObjective(objective.id);
+                tr.style.outline = "2px solid black";
+            })
+
+            const nameTd = document.createElement("td");
+            nameTd.append(objective.name);
+            tr.append(nameTd);
+
+            const descriptionTd = document.createElement("td");
+            descriptionTd.append(objective.description);
+            tr.append(descriptionTd);
+
+            const statusTd = document.createElement("td");
+            statusTd.append(objective.status?.name);
+            tr.append(statusTd);
+
+            return tr;
+        }
+
+        document.getElementById("add_button").addEventListener("click", e => {
+            e.preventDefault();
+            document.getElementById("objective_form").style.display = "block";
+        })
+
+        document.getElementById("delete_button").addEventListener("click", e => {
+            e.preventDefault();
+            const form = document.forms["objectiveForm"];
+            const id = form.elements["id"].value;
+            DeleteObjective(id);
+        })
+
+        document.getElementById("edit_button").addEventListener("click", e => {
+            e.preventDefault();
+            document.getElementById("objective_form").style.display = "block";
+        })
+
+        document.getElementById("reset_button").addEventListener("click", e => {
+            e.preventDefault();
+            Reset();
+        })
+
+        document.forms["objectiveForm"].addEventListener("submit", e => {
+            e.preventDefault();
+
+            const err = document.getElementById("errors");
+            err.innerHTML = "";
+            err.style.display = "none";
+
+            const form = document.forms["objectiveForm"];
+            const id = form.elements["id"].value;
+            const name = form.elements["name"].value;
+            const description = form.elements["description"].value;
+            const statusId = form.elements["statusId"].value;
+            if (id == 0)
+                CreateObjective(name, description, statusId);
+            else
+                EditObjective(id, name, description, statusId);
+        });
+
+        GetObjectives();
+        GetStatuses();
+    </script>
+</body>
+</html>
